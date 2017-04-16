@@ -1,9 +1,0 @@
-- name: Install and configure Tomcat
-  hosts: appservers
-  sudo: True
-  tasks:
-    - name: install Tomcat
-      yum: name=tomcat update_cache=yes
-
-    - name: restart Tomcat
-      service: name=tomcat state=restarted
