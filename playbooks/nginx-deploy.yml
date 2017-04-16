@@ -1,0 +1,10 @@
+- name: Install and configure nginx
+  hosts: webservers
+  sudo: True
+  tasks:
+    - name: deploy static files to nginx
+      unarchive: src=files/a.zip dest=/usr/share/nginx/html keep_newer=True
+
+    - name: restart nginx
+      service: name=nginx state=restarted
+

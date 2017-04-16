@@ -1,0 +1,60 @@
+- name: Install and configure Jenkins
+  hosts: CIservers
+  sudo: True
+  tasks:
+    - name: install Java
+      yum: name=java state=installed
+
+    - name: install Jenkins
+      #yum: pkg=http://archives.jenkins-ci.org/redhat-rc/jenkins-2.0-1.1.noarch.rpm state=installed
+      yum: pkg=files/jenkins.rpm state=installed
+
+    - name: copy Jenkins configuration file
+      copy: src=files/jenkins dest=/etc/sysconfig
+    
+    - name: copy Jenkins Home configuration file
+      copy: src=files/config.xml dest=/var/lib/jenkins
+
+    - name: start Jenkins
+      service: name=jenkins state=restarted enabled=yes
+    
+    - name: wait for Jenkins start
+      local_action:
+        module: wait_for
+          host=localhost
+          port=8000
+          delay=30
+          timeout=60
+    
+    - name: check plugin installation status
+      stat: path=/var/lib/jenkins/plugins/workflow-aggregator.jpi
+      register: st
+
+    - name: install Jenkins plugin
+      command: java -jar files/jenkins-cli.jar -s http://localhost:8000/ install-plugin workflow-aggregator
+      when: not st.stat.exists
+      ignore_errors: True
+
+    - name: wait for plugin install
+      local_action:
+        module: wait_for
+          path=/var/lib/jenkins/plugins/workflow-aggregator.jpi
+
+    - name: restart Jenkins
+      service: name=jenkins state=restarted enabled=yes
+   
+    - name: wait for Jenkins restart
+      local_action:
+        module: wait_for
+          host=localhost
+          port=8080
+          delay=30
+          timeout=60
+
+    - name: create pipeline for static resource
+      shell: java -jar files/jenkins-cli.jar -s http://localhost:8000/ create-job Static-Resource-Pipeline < files/config-static.xml
+      ignore_errors: True
+
+    - name: create pipeline for dynamic app
+      shell: java -jar files/jenkins-cli.jar -s http://localhost:8000/ create-job Dynamic-App-Pipeline < files/config-dynamic.xml 
+      ignore_errors: True 
